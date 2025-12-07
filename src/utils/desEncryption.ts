@@ -1,4 +1,6 @@
-import CryptoJS from 'crypto-js';
+/* Use CommonJS require to improve compatibility with React Native bundlers */
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const CryptoJS = require('crypto-js');
 
 // For backward compatibility we keep the same exported function names
 // but implement AES-256-CBC with a random IV. The IV is prepended to the
@@ -67,7 +69,9 @@ export const decryptDES = (encryptedText: string, key: string = DEFAULT_KEY): st
  * Validate key: allow 1-64 chars (will be hashed to 256-bit)
  */
 export const isValidKey = (key: string): boolean => {
-  return !!(key && key.length > 0 && key.length <= 64);
+  // UI and checks expect keys of 1-16 chars; we allow up to 16 here and
+  // still derive a 256-bit key via SHA-256 for use with AES-256.
+  return !!(key && key.length > 0 && key.length <= 16);
 };
 
 /**
