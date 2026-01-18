@@ -17,6 +17,22 @@ const SUPPORTED_IMAGE_TYPES = [
   'image/bmp',
 ];
 
+const SUPPORTED_FILE_TYPES = [
+  'application/pdf',
+  'text/plain',
+  'text/csv',
+  'application/json',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/zip',
+  'application/x-rar-compressed',
+  'application/x-7z-compressed',
+  'text/xml',
+  'application/xml',
+];
+
 // Simple checksum for file integrity
 const calculateChecksum = (data: string): string => {
   let hash = 0;
@@ -57,6 +73,19 @@ export const fileHandler = {
         return {
           valid: false,
           message: `Định dạng ảnh không hỗ trợ: ${mimeType}\nHỗ trợ: JPEG, PNG, GIF, WebP`,
+        };
+      }
+    } else if (fileType === 'file') {
+      // Allow any MIME type for files, but warn about common unsupported ones
+      const unsafeTypes = [
+        'application/x-executable',
+        'application/x-msdownload',
+        'application/x-msdos-program',
+      ];
+      if (unsafeTypes.includes(mimeType)) {
+        return {
+          valid: false,
+          message: `File type không được phép: ${mimeType}`,
         };
       }
     }
@@ -146,6 +175,16 @@ export const fileHandler = {
   // Check if file is image
   isImageFile(mimeType: string): boolean {
     return mimeType.startsWith('image/');
+  },
+
+  // Check if file type is supported
+  isSupportedFileType(mimeType: string): boolean {
+    return SUPPORTED_FILE_TYPES.includes(mimeType);
+  },
+
+  // Check if file is PDF
+  isPdfFile(mimeType: string): boolean {
+    return mimeType === 'application/pdf';
   },
 
   // Create file message protocol with checksum
