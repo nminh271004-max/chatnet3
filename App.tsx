@@ -67,8 +67,6 @@ function App(): React.JSX.Element {
   const [showRecents, setShowRecents] = useState(false);
   const [username, setUsername] = useState<string>('ChatNET User');
   const [autoDeleteSeconds, setAutoDeleteSeconds] = useState<number>(0); // 0 = no auto-delete
-  const [aesTestRunning, setAesTestRunning] = useState<boolean>(false);
-  const [aesTestResult, setAesTestResult] = useState<any>(null);
   
   const serverRef = useRef<any>(null);
   const clientRef = useRef<any>(null);
@@ -94,33 +92,6 @@ function App(): React.JSX.Element {
   useEffect(() => {
     autoDeleteSecondsRef.current = autoDeleteSeconds;
   }, [autoDeleteSeconds]);
-
-  // Developer: run AES encrypt->decrypt roundtrip using current key
-  const runAesRoundtripTest = () => {
-    setAesTestResult(null);
-    setAesTestRunning(true);
-
-    setTimeout(() => {
-      try {
-        // Create a reasonably large test payload (~200KB) to simulate images/base64
-        const sample = 'A'.repeat(200 * 1024);
-        const key = parseKey(encryptionKeyRef.current || encryptionKey);
-
-        const t0 = Date.now();
-        const enc = encryptDES(sample, key);
-        const t1 = Date.now();
-        const dec = decryptDES(enc, key);
-        const t2 = Date.now();
-
-        const ok = dec === sample;
-        setAesTestResult({ ok, encTimeMs: t1 - t0, decTimeMs: t2 - t1, originalBytes: sample.length, cipherLength: enc.length });
-      } catch (e: any) {
-        setAesTestResult({ ok: false, error: e?.message || String(e) });
-      } finally {
-        setAesTestRunning(false);
-      }
-    }, 50);
-  };
 
   const fetchIpAddress = () => {
     setMyIp('Đang lấy IP...');
@@ -859,38 +830,6 @@ function App(): React.JSX.Element {
                           <Text style={styles.infoText}>
                             DES Encryption. Key phải 1-16 ký tự. Cả 2 người phải dùng cùng key để chat được với nhau.
                           </Text>
-                        </View>
-                        {/* AES/Encryption self-test for debugging on-device */}
-                        <View style={[styles.modalSection, { marginTop: 12 }]}> 
-                          <TouchableOpacity
-                            style={[styles.saveButton, { backgroundColor: aesTestRunning ? '#999' : '#0066cc' }]}
-                            onPress={runAesRoundtripTest}
-                            activeOpacity={0.8}
-                            disabled={aesTestRunning}
-                          >
-                            {aesTestRunning ? (
-                              <ActivityIndicator color="#fff" />
-                            ) : (
-                              <Text style={styles.saveButtonText}>🔬 Chạy kiểm tra AES (dev)</Text>
-                            )}
-                          </TouchableOpacity>
-
-                          {aesTestResult && (
-                            <View style={[styles.infoBox, { marginTop: 10 }]}> 
-                              <Text style={[styles.infoText, { fontWeight: '600' }]}>Kết quả:</Text>
-                              {aesTestResult.error ? (
-                                <Text style={styles.infoText}>Lỗi: {aesTestResult.error}</Text>
-                              ) : (
-                                <>
-                                  <Text style={styles.infoText}>Trạng thái: {aesTestResult.ok ? 'OK' : 'KHÔNG KHỚP'}</Text>
-                                  <Text style={styles.infoText}>Mã hoá: {aesTestResult.encTimeMs} ms</Text>
-                                  <Text style={styles.infoText}>Giải mã: {aesTestResult.decTimeMs} ms</Text>
-                                  <Text style={styles.infoText}>Original bytes: {aesTestResult.originalBytes}</Text>
-                                  <Text style={styles.infoText}>Cipher length: {aesTestResult.cipherLength}</Text>
-                                </>
-                              )}
-                            </View>
-                          )}
                         </View>
                       </View>
                     )}
