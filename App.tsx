@@ -950,7 +950,7 @@ function App(): React.JSX.Element {
                     {isEncryptionEnabled && encryptionMethod !== 'Caesar' && (
                       <View style={styles.modalSection}>
                         <Text style={styles.modalLabel}>
-                          🔑 {encryptionMethod === 'AES' ? 'AES' : encryptionMethod === 'DES' ? 'DES' : 'RSA'} Key (1-16 ký tự)
+                          🔑 {encryptionMethod === 'AES' ? 'AES' : encryptionMethod === 'DES' ? 'DES' : encryptionMethod === 'RSA' ? 'RSA' : ''} Key (1-16 ký tự)
                         </Text>
                         <TextInput
                           style={styles.modalInput}
