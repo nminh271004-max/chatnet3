@@ -24,6 +24,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { encryptAES, decryptAES, isValidKey as isValidAESKey, parseKey } from './src/utils/aesEncryption';
 import { encryptDES, decryptDES, isValidDESKey } from './src/utils/desEncryption';
 import { encryptCaesar, decryptCaesar } from './src/utils/caesarCipher';
+import { encryptRSA, decryptRSA, isValidRSAKey } from './src/utils/rsaEncryption';
 import { fileHandler, FileData, fileHistoryManager, thumbnailCache } from './src/utils/fileHandler';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -69,7 +70,7 @@ function App(): React.JSX.Element {
   const [showRecents, setShowRecents] = useState(false);
   const [username, setUsername] = useState<string>('ChatNET User');
   const [autoDeleteSeconds, setAutoDeleteSeconds] = useState<number>(0); // 0 = no auto-delete
-  const [encryptionMethod, setEncryptionMethod] = useState<'AES' | 'DES' | 'Caesar'>('AES'); // Encryption method selector
+  const [encryptionMethod, setEncryptionMethod] = useState<'AES' | 'DES' | 'Caesar' | 'RSA'>('AES'); // Encryption method selector
   const [caesarShift, setCaesarShift] = useState<number>(3); // Shift for Caesar cipher
   
   const serverRef = useRef<any>(null);
@@ -108,7 +109,7 @@ function App(): React.JSX.Element {
   }, [caesarShift]);
 
   // Encryption helper functions
-  const encryptMessage = (text: string, method: 'AES' | 'DES' | 'Caesar', key: string, caesarShift?: number): string => {
+  const encryptMessage = (text: string, method: 'AES' | 'DES' | 'Caesar' | 'RSA', key: string, caesarShift?: number): string => {
     try {
       switch (method) {
         case 'AES':
@@ -117,6 +118,8 @@ function App(): React.JSX.Element {
           return encryptDES(text, key);
         case 'Caesar':
           return encryptCaesar(text, caesarShift || 3);
+        case 'RSA':
+          return encryptRSA(text, key);
         default:
           return text;
       }
@@ -126,7 +129,7 @@ function App(): React.JSX.Element {
     }
   };
 
-  const decryptMessage = (encryptedText: string, method: 'AES' | 'DES' | 'Caesar', key: string, caesarShift?: number): string => {
+  const decryptMessage = (encryptedText: string, method: 'AES' | 'DES' | 'Caesar' | 'RSA', key: string, caesarShift?: number): string => {
     try {
       switch (method) {
         case 'AES':
@@ -135,6 +138,8 @@ function App(): React.JSX.Element {
           return decryptDES(encryptedText, key);
         case 'Caesar':
           return decryptCaesar(encryptedText, caesarShift || 3);
+        case 'RSA':
+          return decryptRSA(encryptedText, key);
         default:
           return encryptedText;
       }
@@ -144,11 +149,13 @@ function App(): React.JSX.Element {
     }
   };
 
-  const isValidEncryptionKey = (key: string, method: 'AES' | 'DES' | 'Caesar'): boolean => {
+  const isValidEncryptionKey = (key: string, method: 'AES' | 'DES' | 'Caesar' | 'RSA'): boolean => {
     switch (method) {
       case 'AES':
       case 'DES':
         return isValidAESKey(key); // Both AES and DES use same validation
+      case 'RSA':
+        return isValidRSAKey(key); // RSA key validation
       case 'Caesar':
         return true; // Caesar doesn't need key validation, only shift
       default:
@@ -883,7 +890,7 @@ function App(): React.JSX.Element {
                       <View style={styles.modalSection}>
                         <Text style={styles.modalLabel}>🔐 Phương pháp mã hóa</Text>
                         <View style={styles.methodGrid}>
-                          {(['AES', 'DES', 'Caesar'] as const).map(method => (
+                          {(['AES', 'DES', 'Caesar', 'RSA'] as const).map(method => (
                             <TouchableOpacity
                               key={method}
                               style={[
@@ -897,7 +904,7 @@ function App(): React.JSX.Element {
                                 styles.methodButtonText,
                                 encryptionMethod === method && styles.methodButtonTextActive
                               ]}>
-                                {method === 'AES' ? '🔒 AES-256' : method === 'DES' ? '🔐 DES' : '📜 Caesar'}
+                                {method === 'AES' ? '🔒 AES' : method === 'DES' ? '🔐 DES' : method === 'Caesar' ? '📜 Caesar' : '🔑 RSA'}
                               </Text>
                             </TouchableOpacity>
                           ))}
@@ -908,6 +915,7 @@ function App(): React.JSX.Element {
                             {encryptionMethod === 'AES' && 'AES-256: Phương pháp mã hóa hiện đại, an toàn nhất. (Khuyến nghị)'}
                             {encryptionMethod === 'DES' && 'DES: Phương pháp cũ, yếu hơn. Chỉ sử dụng cho mục đích giáo dục.'}
                             {encryptionMethod === 'Caesar' && 'Caesar: Mã hóa cơ bản, không an toàn. Chỉ dùng cho học tập.'}
+                            {encryptionMethod === 'RSA' && 'RSA: Mã hóa khóa công khai. Phiên bản đơn giản cho giáo dục.'}
                           </Text>
                         </View>
                       </View>
