@@ -52,9 +52,9 @@ A **React Native messaging application** with **military-grade encryption**, **d
 
 ### 💬 Real-time Messaging
 
-- ✅ Username display
+- ✅ **Custom Username** - Display your name in messages
+- ✅ **Auto-delete Messages** - Messages vanish after 5-300 seconds
 - ✅ Message timestamps
-- ✅ Auto-delete timers (5-300 seconds)
 - ✅ TCP/IP networking (Port 8888)
 - ✅ Framing protocol (10-digit length prefix)
 - ✅ Message metadata wrapping
@@ -69,7 +69,8 @@ A **React Native messaging application** with **military-grade encryption**, **d
 - ✅ Caesar shift configurator (1-25)
 - ✅ Method-specific info boxes (Vietnamese)
 - ✅ Real-time key validation
-- ✅ Username customization
+- ✅ **Username customization** - Set your display name
+- ✅ **Auto-delete timer selector** - Choose 0s, 5s, 10s, 30s, 60s, 300s
 - ✅ Connection mode selection
 
 ## 🧪 Test Coverage

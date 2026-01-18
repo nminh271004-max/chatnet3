@@ -83,9 +83,9 @@ ChatNET3 is a **secure React Native messaging application** with **advanced encr
 ## 📱 **MESSAGING FEATURES**
 
 ### Core Messaging
-- ✅ Username display
+- ✅ **Username display** - Show sender's name on each message
+- ✅ **Auto-delete messages** - Messages vanish after 5-300 seconds
 - ✅ Message timestamps
-- ✅ Message auto-delete timer (configurable)
 - ✅ TCP/IP communication (Port 8888)
 - ✅ Framing protocol (10-digit length prefix)
 - ✅ Message metadata wrapping

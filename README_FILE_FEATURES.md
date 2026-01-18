@@ -12,6 +12,15 @@ ChatNET3 is a **production-ready messaging app** with:
 
 ## 📋 Features Highlights
 
+### ✨ Messaging Features:
+
+1. **👤 Custom Username** - Display your name for each message
+2. **⏳ Auto-delete Messages** - Messages automatically vanish after 5-300 seconds
+3. **🔐 4 Encryption Methods** - AES-256, DES, Caesar, RSA-like
+4. **✍️ Digital Signatures** - Optional HMAC-SHA256 authentication
+5. **TCP/IP Networking** - Real-time LAN messaging on port 8888
+6. **📱 Server/Client Toggle** - Switch between host and client mode
+
 ### ✨ File Transfer Features:
 
 1. **📷 Send Images over LAN** - Select & send photos from device library
@@ -23,6 +32,117 @@ ChatNET3 is a **production-ready messaging app** with:
 7. **⏳ Transfer Status** - Loading indicators & progress tracking
 8. **🛡️ Security Validation** - MIME type, size, content checks
 
+
+---
+
+## 👤 Username Management
+
+**Feature**: Display your identity in messages and files
+
+```typescript
+// Default username
+username = "ChatNET User"
+
+// Change username in Settings Modal
+Username Input → Type new name → Auto-save to state
+// Sent with every message/file
+
+// Message display format
+[Your Username]: Hello!
+[Other User]: Hi there!
+```
+
+**Implementation**:
+- ✅ Custom username input in Settings
+- ✅ Auto-saved in React state (`useState`)
+- ✅ Sent with every message as metadata
+- ✅ Displayed above each message bubble
+- ✅ Real-time display update
+- ✅ Unicode support for international names
+
+**Code Reference** (App.tsx):
+```typescript
+const [username, setUsername] = useState<string>('ChatNET User');
+
+// In message interface
+interface Message {
+  username?: string; // Sender's username
+  // ... other fields
+}
+
+// UI Display
+{msg.username && (
+  <Text style={styles.usernameLabel}>
+    {msg.sender === 'me' ? 'Bạn' : msg.username}
+  </Text>
+)}
+```
+
+---
+
+## ⏳ Auto-Delete Messages
+
+**Feature**: Messages automatically vanish after a set time
+
+```
+Set timer → Send message → Timer starts → Message disappears
+(5s, 10s, 30s, 60s, 300s, or disabled)
+```
+
+**Available Options**:
+| Time | Use Case |
+|------|----------|
+| **0s (Off)** | Messages stay forever (default) |
+| **5s** | Very sensitive information |
+| **10s** | Quick notifications |
+| **30s** | Passwords, OTPs |
+| **60s** | Temporary messages |
+| **300s** | 5-minute timer for context |
+
+**Implementation**:
+- ✅ Auto-delete timer selector buttons in Settings
+- ✅ Applies to ALL subsequent messages
+- ✅ Server-side timer management
+- ✅ Scheduled deletion via `setTimeout`
+- ✅ Timer cleanup on app close
+- ✅ Per-message metadata tracking
+
+**Code Reference** (App.tsx):
+```typescript
+const [autoDeleteSeconds, setAutoDeleteSeconds] = useState<number>(0);
+const autoDeleteTimersRef = useRef<{ [key: number]: NodeJS.Timeout }>({});
+
+// Schedule auto-delete for a message
+const scheduleAutoDelete = (messageIndex: number, delayMs: number) => {
+  const timer = setTimeout(() => {
+    setMessages(prev => prev.filter((_, i) => i !== messageIndex));
+    delete autoDeleteTimersRef.current[messageIndex];
+  }, delayMs);
+  autoDeleteTimersRef.current[messageIndex] = timer;
+};
+
+// On message received, schedule if auto-delete is enabled
+if (autoDeleteSecondsRef.current > 0) {
+  scheduleAutoDelete(messageIndex, autoDeleteSecondsRef.current * 1000);
+}
+```
+
+**Message Interface**:
+```typescript
+interface Message {
+  autoDeleteIn?: number; // milliseconds (0 = no auto-delete)
+  // ... other fields
+}
+```
+
+**Cleanup**:
+```typescript
+// Cancel all timers on app close
+const cancelAllAutoDeleteTimers = () => {
+  Object.values(autoDeleteTimersRef.current).forEach(timer => clearTimeout(timer));
+  autoDeleteTimersRef.current = {};
+};
+```
 
 ---
 
