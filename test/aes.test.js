@@ -6,6 +6,30 @@
 const CryptoJS = require('crypto-js');
 
 /**
+ * Generate a random IV without relying on native crypto module
+ * Uses CryptoJS entropy with timestamps and Math.random() for React Native compatibility
+ */
+function generateRandomIV() {
+  // Create random bytes using CryptoJS and Math.random()
+  // Combine timestamp, Math.random(), and additional entropy
+  const timestamp = Date.now().toString(36);
+  const randomPart1 = Math.random().toString(36).substring(2, 15);
+  const randomPart2 = Math.random().toString(36).substring(2, 15);
+  const randomPart3 = Math.random().toString(36).substring(2, 15);
+  
+  const entropy = timestamp + randomPart1 + randomPart2 + randomPart3;
+  
+  // Hash it to get more uniform random distribution
+  const hash = CryptoJS.SHA256(entropy).toString();
+  
+  // Take first 32 hex chars (16 bytes = 128 bits) for IV
+  const ivHex = hash.substring(0, 32);
+  
+  // Convert hex to WordArray
+  return CryptoJS.enc.Hex.parse(ivHex);
+}
+
+/**
  * Encrypt text using AES-256-CBC
  * Returns format: ivBase64:cipherBase64
  */
@@ -13,7 +37,7 @@ function encryptAES(text, key) {
   if (!text) return '';
   try {
     const keyHash = CryptoJS.SHA256(key);
-    const iv = CryptoJS.lib.WordArray.random(16);
+    const iv = generateRandomIV();
     const encrypted = CryptoJS.AES.encrypt(text, keyHash, {
       iv,
       mode: CryptoJS.mode.CBC,

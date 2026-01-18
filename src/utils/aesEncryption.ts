@@ -9,6 +9,30 @@ const CryptoJS = require('crypto-js');
 const DEFAULT_KEY = 'ChatNET1';
 
 /**
+ * Generate a random IV without relying on native crypto module
+ * Uses CryptoJS entropy with timestamps and Math.random() for React Native compatibility
+ */
+const generateRandomIV = (): any => {
+  // Create random bytes using CryptoJS and Math.random()
+  // Combine timestamp, Math.random(), and additional entropy
+  const timestamp = Date.now().toString(36);
+  const randomPart1 = Math.random().toString(36).substring(2, 15);
+  const randomPart2 = Math.random().toString(36).substring(2, 15);
+  const randomPart3 = Math.random().toString(36).substring(2, 15);
+  
+  const entropy = timestamp + randomPart1 + randomPart2 + randomPart3;
+  
+  // Hash it to get more uniform random distribution
+  const hash = CryptoJS.SHA256(entropy).toString();
+  
+  // Take first 32 hex chars (16 bytes = 128 bits) for IV
+  const ivHex = hash.substring(0, 32);
+  
+  // Convert hex to WordArray
+  return CryptoJS.enc.Hex.parse(ivHex);
+};
+
+/**
  * Encrypt using AES-256-CBC. Returns a string in the form: ivBase64:cipherBase64
  */
 export const encryptAES = (text: string, key: string = DEFAULT_KEY): string => {
@@ -18,8 +42,8 @@ export const encryptAES = (text: string, key: string = DEFAULT_KEY): string => {
     // Derive a 256-bit key from the passphrase using SHA-256
     const keyHash = CryptoJS.SHA256(key);
 
-    // Generate a random IV (128-bit)
-    const iv = CryptoJS.lib.WordArray.random(16);
+    // Generate a random IV (128-bit) using our custom method
+    const iv = generateRandomIV();
 
     const encrypted = CryptoJS.AES.encrypt(text, keyHash, {
       iv,
