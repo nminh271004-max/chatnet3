@@ -946,11 +946,11 @@ function App(): React.JSX.Element {
                       </View>
                     )}
 
-                    {/* Encryption Key - Show when encryption is enabled */}
-                    {isEncryptionEnabled && (
+                    {/* Encryption Key - Show when encryption is enabled, BUT NOT for Caesar */}
+                    {isEncryptionEnabled && encryptionMethod !== 'Caesar' && (
                       <View style={styles.modalSection}>
                         <Text style={styles.modalLabel}>
-                          🔑 {encryptionMethod === 'AES' ? 'AES' : encryptionMethod === 'DES' ? 'DES' : 'Caesar'} Key (1-16 ký tự)
+                          🔑 {encryptionMethod === 'AES' ? 'AES' : encryptionMethod === 'DES' ? 'DES' : 'RSA'} Key (1-16 ký tự)
                         </Text>
                         <TextInput
                           style={styles.modalInput}
