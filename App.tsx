@@ -21,7 +21,7 @@ import {
 import NetInfo from '@react-native-community/netinfo';
 import TcpSocket from 'react-native-tcp-socket';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { encryptDES, decryptDES, isValidKey, parseKey } from './src/utils/desEncryption';
+import { encryptAES, decryptAES, isValidKey, parseKey } from './src/utils/aesEncryption';
 import { fileHandler, FileData, fileHistoryManager, thumbnailCache } from './src/utils/fileHandler';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -245,7 +245,7 @@ function App(): React.JSX.Element {
 
       const fileMessage = fileHandler.createFileMessage(fileData);
       const messageToSend = isEncryptionEnabled
-        ? encryptDES(fileMessage, parseKey(encryptionKey))
+        ? encryptAES(fileMessage, parseKey(encryptionKey))
         : fileMessage;
 
       // Use a simple length-prefix framing: 10-digit zero-padded length + '|' + payload
@@ -411,7 +411,7 @@ function App(): React.JSX.Element {
               let displayMessage = receivedMessage;
               if (isEncryptionOn && isValidKey(currentKey)) {
                 try {
-                  displayMessage = decryptDES(receivedMessage, parseKey(currentKey));
+                  displayMessage = decryptAES(receivedMessage, parseKey(currentKey));
                 } catch (e) {
                   // decryption failed; leave as-is
                 }
@@ -444,7 +444,7 @@ function App(): React.JSX.Element {
             let displayMessage = payload;
             if (isEncryptionOn && isValidKey(currentKey)) {
               try {
-                displayMessage = decryptDES(payload, parseKey(currentKey));
+                displayMessage = decryptAES(payload, parseKey(currentKey));
               } catch (e) {
                 // decryption may fail; keep original payload
               }
@@ -539,7 +539,7 @@ function App(): React.JSX.Element {
     const wrappedMessage = JSON.stringify({ type: 'TEXT', text: messageToSend, metadata });
     
     const encryptedMessage = isEncryptionEnabled 
-      ? encryptDES(wrappedMessage, parseKey(encryptionKey))
+      ? encryptAES(wrappedMessage, parseKey(encryptionKey))
       : wrappedMessage;
     
     setMessage('');

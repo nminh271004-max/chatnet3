@@ -11,7 +11,7 @@ const DEFAULT_KEY = 'ChatNET1';
 /**
  * Encrypt using AES-256-CBC. Returns a string in the form: ivBase64:cipherBase64
  */
-export const encryptDES = (text: string, key: string = DEFAULT_KEY): string => {
+export const encryptAES = (text: string, key: string = DEFAULT_KEY): string => {
   if (!text) return '';
 
   try {
@@ -40,7 +40,7 @@ export const encryptDES = (text: string, key: string = DEFAULT_KEY): string => {
 /**
  * Decrypt AES-256-CBC encrypted string formatted as ivBase64:cipherBase64
  */
-export const decryptDES = (encryptedText: string, key: string = DEFAULT_KEY): string => {
+export const decryptAES = (encryptedText: string, key: string = DEFAULT_KEY): string => {
   if (!encryptedText) return '';
 
   try {
@@ -83,3 +83,7 @@ export const parseKey = (key: string): string => {
 };
 
 export const getDefaultKey = (): string => DEFAULT_KEY;
+
+// Backward compatibility aliases
+export const encryptDES = encryptAES;
+export const decryptDES = decryptAES;
