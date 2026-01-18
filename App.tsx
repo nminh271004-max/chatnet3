@@ -21,7 +21,9 @@ import {
 import NetInfo from '@react-native-community/netinfo';
 import TcpSocket from 'react-native-tcp-socket';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { encryptAES, decryptAES, isValidKey, parseKey } from './src/utils/aesEncryption';
+import { encryptAES, decryptAES, isValidKey as isValidAESKey, parseKey } from './src/utils/aesEncryption';
+import { encryptDES, decryptDES, isValidDESKey } from './src/utils/desEncryption';
+import { encryptCaesar, decryptCaesar } from './src/utils/caesarCipher';
 import { fileHandler, FileData, fileHistoryManager, thumbnailCache } from './src/utils/fileHandler';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -67,6 +69,8 @@ function App(): React.JSX.Element {
   const [showRecents, setShowRecents] = useState(false);
   const [username, setUsername] = useState<string>('ChatNET User');
   const [autoDeleteSeconds, setAutoDeleteSeconds] = useState<number>(0); // 0 = no auto-delete
+  const [encryptionMethod, setEncryptionMethod] = useState<'AES' | 'DES' | 'Caesar'>('AES'); // Encryption method selector
+  const [caesarShift, setCaesarShift] = useState<number>(3); // Shift for Caesar cipher
   
   const serverRef = useRef<any>(null);
   const clientRef = useRef<any>(null);
@@ -75,6 +79,8 @@ function App(): React.JSX.Element {
   const isEncryptionEnabledRef = useRef(isEncryptionEnabled);
   const usernameRef = useRef(username);
   const autoDeleteSecondsRef = useRef(autoDeleteSeconds);
+  const encryptionMethodRef = useRef(encryptionMethod);
+  const caesarShiftRef = useRef(caesarShift);
   const autoDeleteTimersRef = useRef<{ [key: number]: NodeJS.Timeout }>({});
   
   useEffect(() => {
@@ -93,7 +99,64 @@ function App(): React.JSX.Element {
     autoDeleteSecondsRef.current = autoDeleteSeconds;
   }, [autoDeleteSeconds]);
 
-  const fetchIpAddress = () => {
+  useEffect(() => {
+    encryptionMethodRef.current = encryptionMethod;
+  }, [encryptionMethod]);
+
+  useEffect(() => {
+    caesarShiftRef.current = caesarShift;
+  }, [caesarShift]);
+
+  // Encryption helper functions
+  const encryptMessage = (text: string, method: 'AES' | 'DES' | 'Caesar', key: string, caesarShift?: number): string => {
+    try {
+      switch (method) {
+        case 'AES':
+          return encryptAES(text, key);
+        case 'DES':
+          return encryptDES(text, key);
+        case 'Caesar':
+          return encryptCaesar(text, caesarShift || 3);
+        default:
+          return text;
+      }
+    } catch (error) {
+      console.error('Encryption error:', error);
+      return text;
+    }
+  };
+
+  const decryptMessage = (encryptedText: string, method: 'AES' | 'DES' | 'Caesar', key: string, caesarShift?: number): string => {
+    try {
+      switch (method) {
+        case 'AES':
+          return decryptAES(encryptedText, key);
+        case 'DES':
+          return decryptDES(encryptedText, key);
+        case 'Caesar':
+          return decryptCaesar(encryptedText, caesarShift || 3);
+        default:
+          return encryptedText;
+      }
+    } catch (error) {
+      console.error('Decryption error:', error);
+      return encryptedText;
+    }
+  };
+
+  const isValidEncryptionKey = (key: string, method: 'AES' | 'DES' | 'Caesar'): boolean => {
+    switch (method) {
+      case 'AES':
+      case 'DES':
+        return isValidAESKey(key); // Both AES and DES use same validation
+      case 'Caesar':
+        return true; // Caesar doesn't need key validation, only shift
+      default:
+        return false;
+    }
+  };
+
+    const fetchIpAddress = () => {
     setMyIp('Đang lấy IP...');
     NetInfo.fetch().then(state => {
       if (state.details && 'ipAddress' in state.details) {
@@ -215,7 +278,7 @@ function App(): React.JSX.Element {
       return;
     }
 
-    if (isEncryptionEnabled && !isValidKey(encryptionKey)) {
+    if (isEncryptionEnabled && !isValidEncryptionKey(encryptionKey, encryptionMethod)) {
       Alert.alert('Lỗi mã hóa', 'Key phải là 1-16 ký tự bất kỳ');
       return;
     }
@@ -245,7 +308,7 @@ function App(): React.JSX.Element {
 
       const fileMessage = fileHandler.createFileMessage(fileData);
       const messageToSend = isEncryptionEnabled
-        ? encryptAES(fileMessage, parseKey(encryptionKey))
+        ? encryptMessage(fileMessage, encryptionMethod, encryptionKey, caesarShift)
         : fileMessage;
 
       // Use a simple length-prefix framing: 10-digit zero-padded length + '|' + payload
@@ -392,6 +455,8 @@ function App(): React.JSX.Element {
 
           const isEncryptionOn = isEncryptionEnabledRef.current;
           const currentKey = encryptionKeyRef.current;
+          const currentEncryptionMethod = encryptionMethodRef.current;
+          const currentCaesarShift = caesarShiftRef.current;
 
           // Process as many complete frames as available. Frame format: [10-byte length][|][payload]
           while (true) {
@@ -409,9 +474,9 @@ function App(): React.JSX.Element {
               socket._recvBuffer = '';
 
               let displayMessage = receivedMessage;
-              if (isEncryptionOn && isValidKey(currentKey)) {
+              if (isEncryptionOn && isValidEncryptionKey(currentKey, currentEncryptionMethod)) {
                 try {
-                  displayMessage = decryptAES(receivedMessage, parseKey(currentKey));
+                  displayMessage = decryptMessage(receivedMessage, currentEncryptionMethod, currentKey, currentCaesarShift);
                 } catch (e) {
                   // decryption failed; leave as-is
                 }
@@ -442,9 +507,9 @@ function App(): React.JSX.Element {
 
             // Now process the complete payload
             let displayMessage = payload;
-            if (isEncryptionOn && isValidKey(currentKey)) {
+            if (isEncryptionOn && isValidEncryptionKey(currentKey, currentEncryptionMethod)) {
               try {
-                displayMessage = decryptAES(payload, parseKey(currentKey));
+                displayMessage = decryptMessage(payload, currentEncryptionMethod, currentKey, currentCaesarShift);
               } catch (e) {
                 // decryption may fail; keep original payload
               }
@@ -524,7 +589,7 @@ function App(): React.JSX.Element {
       return;
     }
 
-    if (isEncryptionEnabled && !isValidKey(encryptionKey)) {
+    if (isEncryptionEnabled && !isValidEncryptionKey(encryptionKey, encryptionMethod)) {
       Alert.alert('Lỗi mã hóa', 'Key phải là 1-16 ký tự bất kỳ');
       return;
     }
@@ -539,7 +604,7 @@ function App(): React.JSX.Element {
     const wrappedMessage = JSON.stringify({ type: 'TEXT', text: messageToSend, metadata });
     
     const encryptedMessage = isEncryptionEnabled 
-      ? encryptAES(wrappedMessage, parseKey(encryptionKey))
+      ? encryptMessage(wrappedMessage, encryptionMethod, encryptionKey, caesarShift)
       : wrappedMessage;
     
     setMessage('');
@@ -813,10 +878,72 @@ function App(): React.JSX.Element {
                       </View>
                     </View>
 
-                    {/* Encryption Key - Only show when encryption is enabled */}
+                    {/* Encryption Method Selector - Show when encryption is enabled */}
                     {isEncryptionEnabled && (
                       <View style={styles.modalSection}>
-                        <Text style={styles.modalLabel}>🔑 DES Key (1-16 ký tự)</Text>
+                        <Text style={styles.modalLabel}>🔐 Phương pháp mã hóa</Text>
+                        <View style={styles.methodGrid}>
+                          {(['AES', 'DES', 'Caesar'] as const).map(method => (
+                            <TouchableOpacity
+                              key={method}
+                              style={[
+                                styles.methodButton,
+                                encryptionMethod === method && styles.methodButtonActive
+                              ]}
+                              onPress={() => setEncryptionMethod(method)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[
+                                styles.methodButtonText,
+                                encryptionMethod === method && styles.methodButtonTextActive
+                              ]}>
+                                {method === 'AES' ? '🔒 AES-256' : method === 'DES' ? '🔐 DES' : '📜 Caesar'}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                        <View style={styles.infoBox}>
+                          <Text style={styles.infoIcon}>ℹ️</Text>
+                          <Text style={styles.infoText}>
+                            {encryptionMethod === 'AES' && 'AES-256: Phương pháp mã hóa hiện đại, an toàn nhất. (Khuyến nghị)'}
+                            {encryptionMethod === 'DES' && 'DES: Phương pháp cũ, yếu hơn. Chỉ sử dụng cho mục đích giáo dục.'}
+                            {encryptionMethod === 'Caesar' && 'Caesar: Mã hóa cơ bản, không an toàn. Chỉ dùng cho học tập.'}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Caesar Shift Selector - Show only for Caesar method */}
+                    {isEncryptionEnabled && encryptionMethod === 'Caesar' && (
+                      <View style={styles.modalSection}>
+                        <Text style={styles.modalLabel}>📊 Caesar Shift (1-25)</Text>
+                        <TextInput
+                          style={styles.modalInput}
+                          value={caesarShift.toString()}
+                          onChangeText={(text) => {
+                            const num = parseInt(text) || 3;
+                            if (num > 0 && num <= 25) setCaesarShift(num);
+                          }}
+                          placeholder="3"
+                          placeholderTextColor="#aaa"
+                          keyboardType="number-pad"
+                          maxLength={2}
+                        />
+                        <View style={styles.infoBox}>
+                          <Text style={styles.infoIcon}>ℹ️</Text>
+                          <Text style={styles.infoText}>
+                            Dịch chuyển: {caesarShift}. Cả 2 người phải sử dụng cùng giá trị shift.
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Encryption Key - Show when encryption is enabled */}
+                    {isEncryptionEnabled && (
+                      <View style={styles.modalSection}>
+                        <Text style={styles.modalLabel}>
+                          🔑 {encryptionMethod === 'AES' ? 'AES' : encryptionMethod === 'DES' ? 'DES' : 'Caesar'} Key (1-16 ký tự)
+                        </Text>
                         <TextInput
                           style={styles.modalInput}
                           value={encryptionKey}
@@ -828,7 +955,7 @@ function App(): React.JSX.Element {
                         <View style={styles.infoBox}>
                           <Text style={styles.infoIcon}>ℹ️</Text>
                           <Text style={styles.infoText}>
-                            DES Encryption. Key phải 1-16 ký tự. Cả 2 người phải dùng cùng key để chat được với nhau.
+                            Key phải 1-16 ký tự. Cả 2 người phải dùng cùng key để chat được với nhau. ({encryptionMethod} Encryption)
                           </Text>
                         </View>
                       </View>
@@ -1699,6 +1826,36 @@ const styles = StyleSheet.create({
   },
   fileMenuButtonTextCancel: {
     color: '#666',
+  },
+  // Encryption method selector styles
+  methodGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: verticalScale(12),
+    gap: scale(8),
+  },
+  methodButton: {
+    flex: 1,
+    paddingVertical: verticalScale(10),
+    paddingHorizontal: scale(8),
+    borderRadius: moderateScale(8),
+    backgroundColor: '#f0f0f0',
+    borderWidth: 2,
+    borderColor: '#ddd',
+    alignItems: 'center',
+  },
+  methodButtonActive: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#45a049',
+  },
+  methodButtonText: {
+    fontSize: responsiveFontSize(12),
+    color: '#333',
+    fontWeight: '500',
+  },
+  methodButtonTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 
