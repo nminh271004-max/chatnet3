@@ -16,9 +16,10 @@ export const encryptCaesar = (text: string, shift: number): string => {
         return String.fromCharCode(((code - 97 + shift) % 26) + 97);
       }
       
-      if (code >= 48 && code <= 57) {
-        return String.fromCharCode(((code - 48 + shift) % 10) + 48);
-      }
+      // Don't shift numbers in Caesar cipher (standard behavior)
+      // if (code >= 48 && code <= 57) {
+      //   return String.fromCharCode(((code - 48 + shift) % 10) + 48);
+      // }
       
       return char;
     })
